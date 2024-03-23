@@ -1,11 +1,16 @@
 from flask import Flask, render_template, request
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 from io import BytesIO
 from rembg import remove
 
 import numpy as np
 
 app = Flask(__name__)
+
+fonteRoboto = ImageFont.truetype("RobotoCondensed-Medium.ttf", 90)
+
+azul = (11, 35, 71)
+laranja = (225, 101, 0)
 
 
 @app.route("/")
@@ -48,7 +53,7 @@ def upload():
     h1 = fotoImage.height
     f = 1
     w3 = imageFundo.width * .7   # 70%
-    h3 = imageFundo.height * .95 # 95%
+    h3 = imageFundo.height * .95  # 95%
     while True:
         w2 = int(imageFundo.width / f)
         h2 = int((w2*h1) / w1)
@@ -76,10 +81,27 @@ def upload():
     # Aplicar a máscara para mesclar as imagens
     limiar = 200  # quanto menor mais contorno existe
     fundoArray[fotoMask > limiar] = areaFoto[fotoMask > limiar]
+    imageFundo = Image.fromarray(fundoArray)  # novo fundo!
 
+    # Desenhando elementos e escrevendo os textos
+    desenho = ImageDraw.Draw(imageFundo)
+
+    largura_imagem, altura_imagem = imageFundo.size
+    largura_texto, altura_texto = desenho.textsize(nome, font=fonteRoboto)
+    x = (largura_imagem - largura_texto) / 2
+    y = (altura_imagem - altura_texto) / 2
+
+    desenho.rectangle((x-10, y, x+largura_texto+20, y+altura_texto+20),
+                      fill=laranja)
+
+    # Escrever o texto na imagem
+    desenho.text((x, y), nome,
+                 font=fonteRoboto,
+                 fill=(255, 255, 255))
+
+    # Resultado Final
     output = BytesIO()
-    img = Image.fromarray(fundoArray)
-    img.save(output, format='PNG')
+    imageFundo.save(output, format='PNG')
     output.seek(0)
 
     return output.read(), 200, {'Content-Type': 'image/png'}
